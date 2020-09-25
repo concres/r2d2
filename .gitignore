@@ -1,0 +1,4 @@
+*.pyc
+# result files
+*.png
+*.npy
