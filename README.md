@@ -11,6 +11,8 @@ This repository contains the implementation of the following [paper](https://eur
 }
 ```
 
+With some changes based in this [repository](https://github.com/uoip/monoVO-python).
+
 License
 -------
 
