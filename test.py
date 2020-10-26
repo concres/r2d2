@@ -7,8 +7,8 @@ from visual_odometry import PinholeCamera, VisualOdometry
 
 sequence_num = "04" # two digits
 
-# root_path = "/media/alves/alves32/dataset/"
-root_path  = "/home/thiago/verlab/projects/xquad/code/datasets/testes_slam/kitti/"
+root_path = "/media/alves/alves32/dataset/"
+# root_path  = "/home/thiago/verlab/projects/xquad/code/datasets/testes_slam/kitti/"
 
 img_dir    = root_path+"sequences/"+sequence_num+"/image_0/"
 poses_path = root_path+"poses/"+sequence_num+".txt"	
@@ -35,7 +35,7 @@ width 	= img.shape[1]
 
 #cam = PinholeCamera(1241.0, 376.0, 718.8560, 718.8560, 607.1928, 185.2157)
 cam = PinholeCamera(width, height, fx, fy, cx, cy)
-vo_learning = VisualOdometry(cam, poses_path, learning=True)
+# vo_learning = VisualOdometry(cam, poses_path, learning=True)
 vo_fast 	= VisualOdometry(cam, poses_path, learning=False)
 
 f2 = open(poses_path, 'r')
@@ -80,16 +80,16 @@ for img_id in range(num_imgs):
 	img_path = img_dir+str(img_id).zfill(6)+".png"
 	img = cv2.imread(img_path, 0)
 
-	vo_learning.update(img, img_id, img_path)
+	# vo_learning.update(img, img_id, img_path)
 	vo_fast.update(img, img_id, img_path)
 
-	cur_t = vo_learning.cur_t
-	if(img_id > 2):
-		x, y, z = cur_t[0], cur_t[1], cur_t[2]
-	else:
-		x, y, z = 0., 0., 0.
+	# cur_t = vo_learning.cur_t
+	# if(img_id > 2):
+	# 	x, y, z = cur_t[0], cur_t[1], cur_t[2]
+	# else:
+	# 	x, y, z = 0., 0., 0.
 
-	draw_x, draw_y = int(x)			, int(z)
+	# draw_x, draw_y = int(x)			, int(z)
 	
 	cur_t = vo_fast.cur_t
 	if(img_id > 2):
@@ -99,12 +99,14 @@ for img_id in range(num_imgs):
 
 	draw_x_fast, draw_y_fast = int(x)			, int(z)
 	
-	true_x, true_y = int(vo_learning.trueX)	, int(vo_learning.trueZ)
+	# true_x, true_y = int(vo_learning.trueX)	, int(vo_learning.trueZ)
+	true_x, true_y = int(vo_fast.trueX)	, int(vo_fast.trueZ)
 
-	error = math.sqrt((vo_learning.trueX - x)**2 + (vo_learning.trueY - y)**2 + (vo_learning.trueZ - z)**2)
+	# error = math.sqrt((vo_learning.trueX - x)**2 + (vo_learning.trueY - y)**2 + (vo_learning.trueZ - z)**2)
+	error = math.sqrt((vo_fast.trueX - x)**2 + (vo_fast.trueY - y)**2 + (vo_fast.trueZ - z)**2)
 	errors = np.append(errors, error)
 
-	cv2.circle(traj, (draw_x     +w_start,     draw_y+h_start), 1, (0,0,255), -1) # learning
+	# cv2.circle(traj, (draw_x     +w_start,     draw_y+h_start), 1, (0,0,255), -1) # learning
 	cv2.circle(traj, (draw_x_fast+w_start,draw_y_fast+h_start), 1, (255,0,0), -1) # fast
 	cv2.circle(traj, (true_x     +w_start,     true_y+h_start), 1, (0,255,0), -1) # ground truth
 
