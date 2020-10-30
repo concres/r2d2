@@ -37,6 +37,7 @@ width 	= img.shape[1]
 cam = PinholeCamera(width, height, fx, fy, cx, cy)
 # vo_learning = VisualOdometry(cam, poses_path, learning=True)
 vo_fast 	= VisualOdometry(cam, poses_path, learning=False)
+# vo_fast 	= VisualOdometry(cam, poses_path, learning=True)
 
 f2 = open(poses_path, 'r')
 lines = f2.readlines()
@@ -91,20 +92,20 @@ for img_id in range(num_imgs):
 
 	# draw_x, draw_y = int(x)			, int(z)
 	
-	cur_t = vo_fast.cur_t
-	if(img_id > 2):
-		x, y, z = cur_t[0], cur_t[1], cur_t[2]
-	else:
-		x, y, z = 0., 0., 0.
-
-	draw_x_fast, draw_y_fast = int(x)			, int(z)
-	
 	# true_x, true_y = int(vo_learning.trueX)	, int(vo_learning.trueZ)
 	true_x, true_y = int(vo_fast.trueX)	, int(vo_fast.trueZ)
 
-	# error = math.sqrt((vo_learning.trueX - x)**2 + (vo_learning.trueY - y)**2 + (vo_learning.trueZ - z)**2)
-	error = math.sqrt((vo_fast.trueX - x)**2 + (vo_fast.trueY - y)**2 + (vo_fast.trueZ - z)**2)
-	errors = np.append(errors, error)
+	cur_t = vo_fast.cur_t
+	if(img_id > 2):
+		x, y, z = cur_t[0], cur_t[1], cur_t[2]
+		# error = math.sqrt((vo_learning.trueX - x)**2 + (vo_learning.trueY - y)**2 + (vo_learning.trueZ - z)**2)
+		error = math.sqrt((vo_fast.trueX - x)**2 + (vo_fast.trueY - y)**2 + (vo_fast.trueZ - z)**2)
+		errors = np.append(errors, error)
+	else:
+		x, y, z = 0., 0., 0.
+		error = 0
+
+	draw_x_fast, draw_y_fast = int(x)			, int(z)
 
 	# cv2.circle(traj, (draw_x     +w_start,     draw_y+h_start), 1, (0,0,255), -1) # learning
 	cv2.circle(traj, (draw_x_fast+w_start,draw_y_fast+h_start), 1, (255,0,0), -1) # fast

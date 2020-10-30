@@ -170,17 +170,28 @@ class FeatureExtractor:
             max_size  = self.max_size, 
             verbose = True)
 
-        xys = xys.cpu().numpy()
-        # desc = desc.cpu().numpy()
-        # scores = scores.cpu().numpy()
-        # idxs = scores.argsort()[-args.top_k or None:]
+        # xys = xys.cpu().numpy()
+        # # desc = desc.cpu().numpy()
+        # # scores = scores.cpu().numpy()
+        # # idxs = scores.argsort()[-args.top_k or None:]
         
-        # outpath = img_path + '.' + args.tag
-        # print(f"Saving {len(idxs)} keypoints to {outpath}")
-        # np.savez(open(outpath,'wb'), 
-        #     imsize = (W,H),
-        #     keypoints = xys[idxs], 
-        #     descriptors = desc[idxs], 
-        #     scores = scores[idxs])
+        # # outpath = img_path + '.' + args.tag
+        # # print(f"Saving {len(idxs)} keypoints to {outpath}")
+        # # np.savez(open(outpath,'wb'), 
+        # #     imsize = (W,H),
+        # #     keypoints = xys[idxs], 
+        # #     descriptors = desc[idxs], 
+        # #     scores = scores[idxs])
+        # xy = np.around(xys[:,:-1]) # take only x and y
+        # return xy
+
+        xys = xys.cpu().numpy()
         xy = np.around(xys[:,:-1]) # take only x and y
-        return xy
+        desc = desc.cpu().numpy()
+        scores = scores.cpu().numpy()
+        idxs = scores.argsort()
+        # sort based on the score
+        xy = xy[idxs]
+        desc = desc[idxs]
+
+        return xy, desc
