@@ -2,6 +2,8 @@ import numpy as np
 import cv2
 from extract import FeatureExtractor
 fe = FeatureExtractor()
+from sklearn.ensemble import RandomForestClassifier
+from zodbpickle import pickle
 
 FIRST_FRAME = 0
 SECOND_FRAME = 1
@@ -18,6 +20,11 @@ class PinholeCamera:
 		self.cy = cy
 		self.distortion = (abs(k1) > 0.0000001)
 		self.d = [k1, k2, p1, p2, k3]
+
+
+# load the model from disk
+filename = 'rf_model.sav'
+rfc = pickle.load(open(filename, 'rb'))
 
 
 class VisualOdometry:
@@ -50,6 +57,46 @@ class VisualOdometry:
 		else:
 			norm = cv2.NORM_HAMMING
 			# norm = cv2.NORM_L2
+
+		# filter keypoints with random forest classifier
+		# format keypoint for random forest
+		kp_rf = np.empty((0,6), dtype=np.float32)
+		for p in kp[0]:
+			new_train = np.array([[p.pt[0], p.pt[1], p.size, p.angle, p.response, p.octave]], dtype=np.float32)
+			kp_rf = np.append(kp_rf, new_train, axis=0)
+		# get the good ones
+		goods_rf = rfc.predict(kp_rf)
+
+		kp_old = kp[0]
+		des_old = des[0]
+		kp[0] = []
+		des[0] = np.empty((0,32), dtype=np.uint8)
+		for i in range(len(goods_rf)):
+			if goods_rf[i] == 1:
+				kp[0].append(kp_old[i])
+				# des_f = np.array([des_old[i]], dtype=np.uint8)
+				# print(des[0].shape)
+				# print(des_f.shape)
+				des[0] = np.append(des[0], [des_old[i]], axis=0)
+
+		kp_rf = np.empty((0,6), dtype=np.float32)
+		for p in kp[1]:
+			new_train = np.array([[p.pt[0], p.pt[1], p.size, p.angle, p.response, p.octave]], dtype=np.float32)
+			kp_rf = np.append(kp_rf, new_train, axis=0)
+		# get the good ones
+		goods_rf = rfc.predict(kp_rf)
+
+		kp_old = kp[1]
+		des_old = des[1]
+		kp[1] = []
+		des[1] = np.empty((0,32), dtype=np.uint8)
+		for i in range(len(goods_rf)):
+			if goods_rf[i] == 1:
+				kp[1].append(kp_old[i])
+				des[1] = np.append(des[1], [des_old[i]], axis=0)
+
+		# print(type(kp[0]))
+		# print(type(des[0]))
 
 		matcher = cv2.BFMatcher(norm)
 
