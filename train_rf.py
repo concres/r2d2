@@ -1,9 +1,11 @@
 import numpy as np 
 import cv2
+# import os
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 from zodbpickle import pickle
+# import random as rd
 
 sequence_num = "04" # two digits
 root_path = "/media/alves/alves32/dataset/"
@@ -21,34 +23,36 @@ response_min = float('inf')
 octave_max = float('-inf')
 octave_min = float('inf')
 
-num_imgs = 100
+# total = len([img_name for img_name in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, img_name))])
+# print(total)
+num_imgs = 250
 # get max values for normalization
-for img_id in range(num_imgs+1):
-	img_path = img_dir+str(img_id).zfill(6)+".png"
-	img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-	kp = detector.detect(img)
-	# kp = kp[:1000] # sometimes return more than 1000
-	for p in kp:
-		if p.size > size_max:
-			size_max = p.size
-		elif p.size < size_min:
-			size_min = p.size
+# for img_id in range(num_imgs+1):
+# 	img_path = img_dir+str(img_id).zfill(6)+".png"
+# 	img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+# 	kp = detector.detect(img)
+# 	# kp = kp[:1000] # sometimes return more than 1000
+# 	for p in kp:
+# 		if p.size > size_max:
+# 			size_max = p.size
+# 		elif p.size < size_min:
+# 			size_min = p.size
 
-		if p.angle > angle_max:
-			angle_max = p.angle
-		elif p.angle < angle_min:
-			angle_min = p.angle
+# 		if p.angle > angle_max:
+# 			angle_max = p.angle
+# 		elif p.angle < angle_min:
+# 			angle_min = p.angle
 
-		if p.response > response_max:
-			response_max = p.response
-		elif p.response < response_min:
-			response_min = p.response
+# 		if p.response > response_max:
+# 			response_max = p.response
+# 		elif p.response < response_min:
+# 			response_min = p.response
 
-		if p.octave > octave_max:
-			octave_max = p.octave
-		elif p.octave < octave_min:
-			octave_min = p.octave
-	print(img_id)
+# 		if p.octave > octave_max:
+# 			octave_max = p.octave
+# 		elif p.octave < octave_min:
+# 			octave_min = p.octave
+# 	print(img_id)
 
 
 x_train = np.empty((0,6), dtype=np.float32)
@@ -80,7 +84,7 @@ for img_id in range(1, num_imgs+1):
 	# Apply ratio test
 	good1 = []
 	for m,n in matches:
-	    if m.distance < 0.55*n.distance:
+	    if m.distance < 0.85*n.distance:
 	        good1.append(m)
 	# good = good1
 
@@ -89,7 +93,7 @@ for img_id in range(1, num_imgs+1):
 	# Apply ratio test
 	good2 = []
 	for m,n in matches:
-	    if m.distance < 0.55*n.distance:
+	    if m.distance < 0.85*n.distance:
 	        good2.append(m)
 
 	# make the crosscheck
