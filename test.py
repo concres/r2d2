@@ -2,10 +2,11 @@ import numpy as np
 import cv2, os
 import math
 import matplotlib.pyplot as plt
+import time
 
 from visual_odometry import PinholeCamera, VisualOdometry
 
-sequence_num = "04" # two digits
+sequence_num = "05" # two digits
 
 root_path = "/media/alves/alves32/dataset/"
 # root_path  = "/home/thiago/verlab/projects/xquad/code/datasets/testes_slam/kitti/"
@@ -36,8 +37,8 @@ width 	= img.shape[1]
 #cam = PinholeCamera(1241.0, 376.0, 718.8560, 718.8560, 607.1928, 185.2157)
 cam = PinholeCamera(width, height, fx, fy, cx, cy)
 # vo_learning = VisualOdometry(cam, poses_path, learning=True)
-vo_fast 	= VisualOdometry(cam, poses_path, learning=False)
-# vo_fast 	= VisualOdometry(cam, poses_path, learning=True)
+# vo_fast 	= VisualOdometry(cam, poses_path, learning=False, rf=True)
+vo_fast 	= VisualOdometry(cam, poses_path, learning=True, rf=False)
 
 f2 = open(poses_path, 'r')
 lines = f2.readlines()
@@ -73,9 +74,13 @@ print("window_width, window_height = ", window_width, window_height)
 
 traj = np.zeros((window_height,window_width,3), dtype=np.uint8)
 errors = np.empty((1,0), dtype=np.float32)
+pred_traj = np.empty((0,3), dtype=np.float32)
 
 num_imgs = len([img_name for img_name in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, img_name))])
 
+start_time = time.time() # measure execution time
+
+# num_imgs = 100
 for img_id in range(num_imgs):
 
 	img_path = img_dir+str(img_id).zfill(6)+".png"
@@ -101,6 +106,15 @@ for img_id in range(num_imgs):
 		# error = math.sqrt((vo_learning.trueX - x)**2 + (vo_learning.trueY - y)**2 + (vo_learning.trueZ - z)**2)
 		error = math.sqrt((vo_fast.trueX - x)**2 + (vo_fast.trueY - y)**2 + (vo_fast.trueZ - z)**2)
 		errors = np.append(errors, error)
+		
+		# print(type(x[0]))
+		# print(type(y[0]))
+		# print(type(z[0]))
+		# aux = np.array(([x], [y], [z]))
+		# print(pred_traj.shape)
+		# print(aux.shape)
+
+		pred_traj = np.append(pred_traj, [[x[0], y[0], z[0]]], axis=0)
 	else:
 		x, y, z = 0., 0., 0.
 		error = 0
@@ -130,9 +144,28 @@ for img_id in range(num_imgs):
 
 cv2.imwrite('map_sequence'+sequence_num+'.png', traj)
 
+with open('error_seq_'+sequence_num+'.npy', 'wb') as f:
+    np.save(f, errors)
+
+with open('traj_seq_'+sequence_num+'.npy', 'wb') as f:
+    np.save(f, pred_traj)
+
+with open('exetime_seq_'+sequence_num+'.txt', 'w') as f:
+	f.write("%s\n" % (time.time() - start_time))
+	if vo_fast.rf == True:
+		f.write("%s\n" % (vo_fast.too_restrictive_count/num_imgs*100))
+
+
+# f = open('exetime_seq_'+sequence_num+'.txt', 'wb')
+# f.write("Now the file has more content!")
+# # f.write("%s" % (time.time() - start_time))
+# f.close()
+
+# with open('exetime_seq_'+sequence_num+'.txt', 'wb') as f:
+# 	f.write("%s" % (time.time() - start_time))
+    
+
 plt.plot(errors)
 plt.ylabel('Error meters')
 plt.show()
 
-with open('error_sequence'+sequence_num+'.npy', 'wb') as f:
-    np.save(f, errors)

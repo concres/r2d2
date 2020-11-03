@@ -7,6 +7,9 @@ from sklearn.metrics import accuracy_score
 from zodbpickle import pickle
 # import random as rd
 
+# import sys
+# np.set_printoptions(threshold=sys.maxsize)
+
 sequence_num = "04" # two digits
 root_path = "/media/alves/alves32/dataset/"
 img_dir    = root_path+"sequences/"+sequence_num+"/image_0/"
@@ -26,34 +29,6 @@ octave_min = float('inf')
 # total = len([img_name for img_name in os.listdir(img_dir) if os.path.isfile(os.path.join(img_dir, img_name))])
 # print(total)
 num_imgs = 250
-# get max values for normalization
-# for img_id in range(num_imgs+1):
-# 	img_path = img_dir+str(img_id).zfill(6)+".png"
-# 	img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-# 	kp = detector.detect(img)
-# 	# kp = kp[:1000] # sometimes return more than 1000
-# 	for p in kp:
-# 		if p.size > size_max:
-# 			size_max = p.size
-# 		elif p.size < size_min:
-# 			size_min = p.size
-
-# 		if p.angle > angle_max:
-# 			angle_max = p.angle
-# 		elif p.angle < angle_min:
-# 			angle_min = p.angle
-
-# 		if p.response > response_max:
-# 			response_max = p.response
-# 		elif p.response < response_min:
-# 			response_min = p.response
-
-# 		if p.octave > octave_max:
-# 			octave_max = p.octave
-# 		elif p.octave < octave_min:
-# 			octave_min = p.octave
-# 	print(img_id)
-
 
 x_train = np.empty((0,6), dtype=np.float32)
 y_train = np.zeros(num_imgs*1000, dtype=np.uint8)
@@ -84,7 +59,7 @@ for img_id in range(1, num_imgs+1):
 	# Apply ratio test
 	good1 = []
 	for m,n in matches:
-	    if m.distance < 0.85*n.distance:
+	    if m.distance < 0.55*n.distance:
 	        good1.append(m)
 	# good = good1
 
@@ -93,7 +68,7 @@ for img_id in range(1, num_imgs+1):
 	# Apply ratio test
 	good2 = []
 	for m,n in matches:
-	    if m.distance < 0.85*n.distance:
+	    if m.distance < 0.55*n.distance:
 	        good2.append(m)
 
 	# make the crosscheck
@@ -105,16 +80,8 @@ for img_id in range(1, num_imgs+1):
 				break
 	good = really_good
 
-	# normalize values to uint8 (memory)
+
 	for p in kp_ref:
-		# n_pt0 = np.uint8(p.pt[0]*255/img.shape[0])
-		# n_pt1 = np.uint8(p.pt[1]*255/img.shape[1])
-		# n_sz = np.uint8((p.size-size_min)*255/size_max)
-		# n_ang = np.uint8((p.angle-angle_min)*255/angle_max)
-		# n_resp = np.uint8((p.response-response_min)*255/response_max)
-		# n_oct = np.uint8((p.octave-octave_min)*255/octave_max)
-		# new_train = np.array([[n_pt0, n_pt1, n_sz, n_ang, n_resp, n_oct]], dtype=np.uint8)
-		# x_train = np.append(x_train, new_train, axis=0)
 		new_train = np.array([[p.pt[0], p.pt[1], p.size, p.angle, p.response, p.octave]], dtype=np.float32)
 		x_train = np.append(x_train, new_train, axis=0)
 
@@ -134,6 +101,27 @@ rfc.fit(x_train, y_train)
 y_pred = rfc.predict(x_train)
 print('Acurácia treino: %.2f%%' % (accuracy_score(y_train, y_pred)*100))
 
+# print(y_train)
+# print(y_pred)
+
 # save the model to disk
 filename = 'rf_model.sav'
 pickle.dump(rfc, open(filename, 'wb'))
+
+
+from sklearn.tree import export_graphviz
+from subprocess import call
+for i in range(len(rfc.estimators_)):
+	estimator = rfc.estimators_[i]
+
+	# Export as dot file
+	export_graphviz(estimator, out_file='tree.dot', 
+	                # feature_names = iris.feature_names,
+	                # class_names = iris.target_names,
+	                rounded = True, proportion = False, 
+	                precision = 2, filled = True)
+
+	# Convert to png using system command (requires Graphviz)
+	
+	file_name = ('tree'+str(i)+'.png')
+	call(['dot', '-Tpng', 'tree.dot', '-o', file_name, '-Gdpi=600'])

@@ -28,7 +28,7 @@ rfc = pickle.load(open(filename, 'rb'))
 
 
 class VisualOdometry:
-	def __init__(self, cam, annotations, learning=False):
+	def __init__(self, cam, annotations, learning=False, rf=False):
 		self.frame_stage = FIRST_FRAME
 		self.learning=learning
 		self.cam = cam
@@ -45,53 +45,64 @@ class VisualOdometry:
 		# self.detector = cv2.FastFeatureDetector_create(threshold=25, nonmaxSuppression=True)
 		self.detector = cv2.xfeatures2d.SIFT_create()
 		self.descriptor = cv2.xfeatures2d.BriefDescriptorExtractor_create()
+		self.rf = rf # use random forest classifier
+		self.too_restrictive_count = 0
 		
 		with open(annotations) as f:
 			self.annotations = f.readlines()
 		self.img_path = None
 		self.args = None
 
-	def matcherKeypoints(self, kp, des):
+	def matcherKeypoints(self, kp, des, use_rf):
 		if self.learning:
 			norm = cv2.NORM_L2
 		else:
 			norm = cv2.NORM_HAMMING
 			# norm = cv2.NORM_L2
+		if use_rf == True:
+			# print("rf_used")
+			# filter keypoints with random forest classifier
+			# format keypoint for random forest
+			
+			kp_bkup = kp.copy()
+			des_bkup = des.copy()
+			kp_rf = np.empty((0,6), dtype=np.float32)
+			for p in kp[0]:
+				new_train = np.array([[p.pt[0], p.pt[1], p.size, p.angle, p.response, p.octave]], dtype=np.float32)
+				kp_rf = np.append(kp_rf, new_train, axis=0)
+			# get the good ones
+			goods_rf = rfc.predict(kp_rf)
 
-		# filter keypoints with random forest classifier
-		# format keypoint for random forest
-		# kp_rf = np.empty((0,6), dtype=np.float32)
-		# for p in kp[0]:
-		# 	new_train = np.array([[p.pt[0], p.pt[1], p.size, p.angle, p.response, p.octave]], dtype=np.float32)
-		# 	kp_rf = np.append(kp_rf, new_train, axis=0)
-		# # get the good ones
-		# goods_rf = rfc.predict(kp_rf)
+			# kp_old = kp[0].copy()
+			# des_old = np.copy(des[0])
+			kp[0] = []
+			des[0] = np.empty((0,32), dtype=np.uint8)
+			for i in range(len(goods_rf)):
+				if goods_rf[i] == 1:
+					kp[0].append(kp_bkup[0][i])
+					des[0] = np.append(des[0], [des_bkup[0][i]], axis=0)
 
-		# kp_old = kp[0]
-		# des_old = des[0]
-		# kp[0] = []
-		# des[0] = np.empty((0,32), dtype=np.uint8)
-		# for i in range(len(goods_rf)):
-		# 	if goods_rf[i] == 1:
-		# 		kp[0].append(kp_old[i])
-		# 		des[0] = np.append(des[0], [des_old[i]], axis=0)
+			kp_rf = np.empty((0,6), dtype=np.float32)
+			for p in kp[1]:
+				new_train = np.array([[p.pt[0], p.pt[1], p.size, p.angle, p.response, p.octave]], dtype=np.float32)
+				kp_rf = np.append(kp_rf, new_train, axis=0)
+			# get the good ones
+			goods_rf = rfc.predict(kp_rf)
 
-		# kp_rf = np.empty((0,6), dtype=np.float32)
-		# for p in kp[1]:
-		# 	new_train = np.array([[p.pt[0], p.pt[1], p.size, p.angle, p.response, p.octave]], dtype=np.float32)
-		# 	kp_rf = np.append(kp_rf, new_train, axis=0)
-		# # get the good ones
-		# goods_rf = rfc.predict(kp_rf)
+			# kp_old = kp[1].copy()
+			# des_old = np.copy(des[1])
+			kp[1] = []
+			des[1] = np.empty((0,32), dtype=np.uint8)
+			for i in range(len(goods_rf)):
+				if goods_rf[i] == 1:
+					kp[1].append(kp_bkup[1][i])
+					des[1] = np.append(des[1], [des_bkup[1][i]], axis=0)
 
-		# kp_old = kp[1]
-		# des_old = des[1]
-		# kp[1] = []
-		# des[1] = np.empty((0,32), dtype=np.uint8)
-		# for i in range(len(goods_rf)):
-		# 	if goods_rf[i] == 1:
-		# 		kp[1].append(kp_old[i])
-		# 		des[1] = np.append(des[1], [des_old[i]], axis=0)
-
+		# print(len(kp[0]))
+		# print(des[0].shape)
+		# print("---")
+		# print(len(kp[1]))
+		# print(des[1].shape)
 
 		matcher = cv2.BFMatcher(norm)
 
@@ -99,18 +110,24 @@ class VisualOdometry:
 		matches = matcher.knnMatch(des[0],des[1],k=2)
 		# Apply ratio test
 		good1 = []
+		# print(len(matches))
 		for m,n in matches:
 		    if m.distance < 0.85*n.distance:
 		        good1.append(m)
-		# good = good1
+
+		# print(len(good1))
 
 		# make the matches for the other direction
 		matches = matcher.knnMatch(des[1],des[0],k=2)
 		# Apply ratio test
 		good2 = []
+		# print(len(matches))
+
 		for m,n in matches:
 		    if m.distance < 0.85*n.distance:
 		        good2.append(m)
+
+		# print(len(good2))
 
 		# make the crosscheck
 		really_good = []
@@ -121,19 +138,31 @@ class VisualOdometry:
 					break
 		good = really_good
 
+		# print(len(good))
+		# matcher = cv2.BFMatcher(norm, crossCheck=True)
+		# good = matcher.matcher(des[0], des[1])
+
 		if self.learning:
 			src_pts = np.float32([ kp[0][m.queryIdx] for m in good ]).reshape(-1,1,2)
 			dst_pts = np.float32([ kp[1][m.trainIdx] for m in good ]).reshape(-1,1,2)
 		else:
 			src_pts = np.float32([ kp[0][m.queryIdx].pt for m in good ]).reshape(-1,1,2)
 			dst_pts = np.float32([ kp[1][m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+
+		if use_rf == True and (len(src_pts) < 9 or len(dst_pts) < 9):
+			# print("kkk eae man")
+			# print(len(kp_bkup[0]))
+			# print(des_bkup[0].shape)
+			src_pts, dst_pts = self.matcherKeypoints(kp_bkup, des_bkup, False)
+			self.too_restrictive_count += 1
+
 		return src_pts, dst_pts
 
 	def getKeypointsAndDescriptors(self, img):
 		if self.learning:
 			kp, des = fe.extract_keypoints(self.img_path)
-			kp = kp[:1000]
-			des = kp[:1000]
+			# kp = kp[:1000]
+			# des = kp[:1000]
 		else:
 			kp = self.detector.detect(img)
 			kp, des = self.descriptor.compute(img, kp)
@@ -158,7 +187,9 @@ class VisualOdometry:
 			return
 		# get keypoint of the current frame
 		self.kp_cur, self.des_cur = self.getKeypointsAndDescriptors(self.new_frame)
-		kp_ref_f, kp_cur_f = self.matcherKeypoints([self.kp_ref, self.kp_cur], [self.des_ref, self.des_cur])
+		kp_ref_f, kp_cur_f = self.matcherKeypoints([self.kp_ref, self.kp_cur], [self.des_ref, self.des_cur], self.rf)
+		print(len(kp_ref_f))
+		# print(len(kp_cur_f))
 		# get first rotation and translation
 		if self.frame_stage == SECOND_FRAME:
 			self.frame_stage = DEFAULT_FRAME
