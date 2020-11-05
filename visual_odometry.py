@@ -188,7 +188,7 @@ class VisualOdometry:
 		# get keypoint of the current frame
 		self.kp_cur, self.des_cur = self.getKeypointsAndDescriptors(self.new_frame)
 		kp_ref_f, kp_cur_f = self.matcherKeypoints([self.kp_ref, self.kp_cur], [self.des_ref, self.des_cur], self.rf)
-		print(len(kp_ref_f))
+		# print(len(kp_ref_f))
 		# print(len(kp_cur_f))
 		# get first rotation and translation
 		if self.frame_stage == SECOND_FRAME:

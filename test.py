@@ -6,7 +6,7 @@ import time
 
 from visual_odometry import PinholeCamera, VisualOdometry
 
-sequence_num = "05" # two digits
+sequence_num = "02" # two digits
 
 root_path = "/media/alves/alves32/dataset/"
 # root_path  = "/home/thiago/verlab/projects/xquad/code/datasets/testes_slam/kitti/"
@@ -80,7 +80,6 @@ num_imgs = len([img_name for img_name in os.listdir(img_dir) if os.path.isfile(o
 
 start_time = time.time() # measure execution time
 
-# num_imgs = 100
 for img_id in range(num_imgs):
 
 	img_path = img_dir+str(img_id).zfill(6)+".png"
@@ -107,13 +106,6 @@ for img_id in range(num_imgs):
 		error = math.sqrt((vo_fast.trueX - x)**2 + (vo_fast.trueY - y)**2 + (vo_fast.trueZ - z)**2)
 		errors = np.append(errors, error)
 		
-		# print(type(x[0]))
-		# print(type(y[0]))
-		# print(type(z[0]))
-		# aux = np.array(([x], [y], [z]))
-		# print(pred_traj.shape)
-		# print(aux.shape)
-
 		pred_traj = np.append(pred_traj, [[x[0], y[0], z[0]]], axis=0)
 	else:
 		x, y, z = 0., 0., 0.
@@ -137,6 +129,8 @@ for img_id in range(num_imgs):
 	text = "err = %.2fm"%(error)
 	cv2.putText(traj, text, (20,120), cv2.FONT_HERSHEY_PLAIN, 1, (255,255,255), 1, 8)
 	
+	# current frame
+	print("Frame: %i/%i" % (img_id, num_imgs))
 
 	# cv2.imshow('Road facing camera', img)
 	cv2.imshow('Trajectory Sequence '+sequence_num, traj)

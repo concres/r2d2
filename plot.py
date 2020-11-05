@@ -4,7 +4,7 @@ import math
 import matplotlib.pyplot as plt
 # import time
 
-sequence_num = "04" # two digits
+sequence_num = "02" # two digits
 
 root_path = "/media/alves/alves32/dataset/"
 # root_path  = "/home/thiago/verlab/projects/xquad/code/datasets/testes_slam/kitti/"
